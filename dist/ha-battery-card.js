@@ -1,5 +1,5 @@
 (() => {
-  const CARD_VERSION = '1.0.0';
+  const CARD_VERSION = '0.1.0';
 
   function getColor(pct) {
     if (pct <= 20) return { fill: '#ff2020', glow: 'rgba(255,32,32,0.7)' };
@@ -83,7 +83,7 @@
     return `
 <div class="battery-cell">
   <div class="battery-svg-wrap">${buildSVG(pct, color)}</div>
-  <div class="battery-pct" style="color:${color.fill};text-shadow:0 0 8px ${color.glow}">${pct}%</div>
+  <div class="battery-pct" style="color:${color.fill};text-shadow:0 0 8px ${color.glow}">${pct.toFixed(2)}%</div>
   ${kwhStr}
   <div class="battery-name">${battery.name || ''}</div>
 </div>`;
@@ -94,8 +94,6 @@
       display: block;
     }
     ha-card {
-      background: linear-gradient(160deg, #0d0d1f 0%, #111126 100%);
-      border: 1px solid rgba(80,80,140,0.3);
       overflow: hidden;
     }
     .card-header {
