@@ -1,5 +1,5 @@
 (() => {
-  const CARD_VERSION = '0.5.1';
+  const CARD_VERSION = '0.6.0';
 
   function getColor(pct) {
     if (pct <= 20) return { fill: '#ff2020', glow: 'rgba(255,32,32,0.7)' };
@@ -10,7 +10,7 @@
   function buildSVG(pct, color, kwh) {
     const W = 80, H = 140;
     const termW = 24, termH = 8;
-    const bodyR = 6;
+    const bodyR = 16;
     const fillH = Math.round((H - 4) * (pct / 100));
     const fillY = 4 + (H - 4) - fillH;
     const bodyCenterY = termH + 2 + (H - 4) / 2;
@@ -47,7 +47,7 @@
 
   <!-- Terminal nub -->
   <rect x="${(W - termW) / 2}" y="0" width="${termW}" height="${termH + 2}"
-        rx="3" ry="3" fill="#333355"/>
+        rx="5" ry="5" fill="#333355"/>
 
   <!-- Battery body background -->
   <rect x="2" y="${termH + 2}" width="${W - 4}" height="${H - 4}"
@@ -140,6 +140,18 @@
       50%       { opacity: 0.75; }
     }
     .battery-fill { animation: glow-pulse 2.4s ease-in-out infinite; }
+    .total-kwh {
+      text-align: center;
+      padding: 4px 16px 16px;
+      font-size: 1em;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: #99a;
+    }
+    .total-kwh span {
+      color: #39ff14;
+      text-shadow: 0 0 8px rgba(57,255,20,0.6);
+    }
   `;
 
   // ── Editor ──────────────────────────────────────────────────────────────────
@@ -179,6 +191,7 @@
 
   const TITLE_SCHEMA = [
     { name: 'title', label: 'Card title', selector: { text: {} } },
+    { name: 'show_total', label: 'Show total kWh', selector: { boolean: {} } },
   ];
 
   const BATTERY_SCHEMA = [
@@ -300,8 +313,8 @@
     }
 
     setConfig(config) {
-      if (!config.batteries || !Array.isArray(config.batteries) || config.batteries.length === 0) {
-        throw new Error('ha-battery-card: provide at least one entry in "batteries"');
+      if (!config.batteries || !Array.isArray(config.batteries)) {
+        throw new Error('ha-battery-card: "batteries" must be a list');
       }
       this._config = config;
       this._buildDOM();
@@ -322,6 +335,7 @@
 <ha-card>
   ${this._config.title ? `<div class="card-header">${this._config.title}</div>` : ''}
   <div class="battery-grid"></div>
+  <div class="total-kwh" style="display:none"></div>
 </ha-card>`;
     }
 
@@ -332,6 +346,26 @@
       grid.querySelectorAll('.battery-cell').forEach((cell, i) => {
         cell.addEventListener('click', () => this._handleClick(i));
       });
+
+      const totalEl = this.shadowRoot.querySelector('.total-kwh');
+      if (totalEl) {
+        if (this._config.show_total) {
+          const values = this._config.batteries
+            .map(b => b.energy_entity && this._hass?.states[b.energy_entity])
+            .filter(s => s && s.state !== 'unavailable' && s.state !== 'unknown')
+            .map(s => parseFloat(s.state))
+            .filter(v => !isNaN(v));
+          if (values.length) {
+            const total = values.reduce((a, b) => a + b, 0);
+            totalEl.innerHTML = `Total remaining: <span>${total.toFixed(2)} kWh</span>`;
+            totalEl.style.display = '';
+          } else {
+            totalEl.style.display = 'none';
+          }
+        } else {
+          totalEl.style.display = 'none';
+        }
+      }
     }
 
     _handleClick(index) {
@@ -348,12 +382,7 @@
     }
 
     static getStubConfig() {
-      return {
-        title: 'Battery Status',
-        batteries: [
-          { name: 'Home Battery', percentage_entity: 'sensor.battery_level', energy_entity: 'sensor.battery_energy_kwh' },
-        ],
-      };
+      return { batteries: [] };
     }
   }
 

@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-05-20
+
+### Added
+- Optional total kWh display — enable "Show total kWh" in the editor to show combined remaining energy below the grid
+- `show_total` toggle added to card editor
+
+### Changed
+- Battery body corners rounded (radius 16) for a softer look
+- New card added via UI starts empty — no pre-filled placeholder entity names
+
+### Fixed
+- Card no longer throws when batteries list is empty
+
 ## [0.5.1] - 2026-05-20
 
 ### Fixed
