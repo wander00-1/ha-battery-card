@@ -1,5 +1,5 @@
 (() => {
-  const CARD_VERSION = '0.3.0';
+  const CARD_VERSION = '0.4.0';
 
   function getColor(pct) {
     if (pct <= 20) return { fill: '#ff2020', glow: 'rgba(255,32,32,0.7)' };
@@ -175,10 +175,6 @@
       display: flex;
       justify-content: flex-end;
     }
-    .add-row mwc-button {
-      --mdc-theme-primary: #1976d2;
-      --mdc-theme-on-primary: white;
-    }
   `;
 
   const TITLE_SCHEMA = [
@@ -225,6 +221,7 @@
       titleForm.hass = this._hass;
       titleForm.data = { title: this._config.title || '' };
       titleForm.schema = TITLE_SCHEMA;
+      titleForm.computeLabel = s => s.label || s.name;
       titleForm.addEventListener('value-changed', e => {
         this._config = { ...this._config, title: e.detail.value.title };
         this._fire();
@@ -260,6 +257,7 @@
           energy_entity: battery.energy_entity || '',
         };
         form.schema = BATTERY_SCHEMA;
+        form.computeLabel = s => s.label || s.name;
         form.addEventListener('value-changed', e => {
           this._config.batteries[i] = { ...this._config.batteries[i], ...e.detail.value };
           this._fire();
@@ -272,8 +270,10 @@
       const addRow = document.createElement('div');
       addRow.className = 'add-row';
       const addBtn = document.createElement('mwc-button');
-      addBtn.setAttribute('icon', 'mdi:plus');
+      addBtn.setAttribute('raised', '');
       addBtn.textContent = 'Add Battery';
+      addBtn.style.setProperty('--mdc-theme-primary', '#1976d2');
+      addBtn.style.setProperty('--mdc-theme-on-primary', 'white');
       addBtn.addEventListener('click', () => {
         this._config.batteries.push({ name: '', percentage_entity: '', energy_entity: '' });
         this._fire();
