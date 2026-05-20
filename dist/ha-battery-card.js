@@ -1,5 +1,5 @@
 (() => {
-  const CARD_VERSION = '0.2.0';
+  const CARD_VERSION = '0.3.0';
 
   function getColor(pct) {
     if (pct <= 20) return { fill: '#ff2020', glow: 'rgba(255,32,32,0.7)' };
@@ -17,7 +17,6 @@
 
     const kwhLabel = (kwh !== null && !isNaN(kwh))
       ? `
-  <rect x="6" y="${bodyCenterY - 10}" width="${W - 12}" height="18" rx="3" fill="rgba(0,0,0,0.45)"/>
   <text x="${W / 2}" y="${bodyCenterY + 4}" text-anchor="middle"
         font-size="11" font-family="sans-serif" font-weight="600"
         fill="white" style="pointer-events:none">${kwh.toFixed(2)} kWh</text>`
@@ -176,6 +175,10 @@
       display: flex;
       justify-content: flex-end;
     }
+    .add-row mwc-button {
+      --mdc-theme-primary: #1976d2;
+      --mdc-theme-on-primary: white;
+    }
   `;
 
   const TITLE_SCHEMA = [
@@ -184,8 +187,8 @@
 
   const BATTERY_SCHEMA = [
     { name: 'name', label: 'Battery name', selector: { text: {} } },
-    { name: 'percentage_entity', label: 'Percentage entity (%)', selector: { entity: { domain: 'sensor' } } },
-    { name: 'energy_entity', label: 'Energy entity (kWh)', selector: { entity: { domain: 'sensor' } } },
+    { name: 'percentage_entity', label: 'Battery Percentage', selector: { entity: { domain: 'sensor' } } },
+    { name: 'energy_entity', label: 'Battery Power (kWh)', selector: { entity: { domain: 'sensor' } } },
   ];
 
   class HaBatteryCardEditor extends HTMLElement {
