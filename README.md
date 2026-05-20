@@ -2,7 +2,13 @@
 
 A Home Assistant Lovelace custom card that displays battery charge level and energy (kWh) with a glowing, colour-coded SVG graphic. Supports multiple batteries in a responsive grid layout.
 
-![Battery Card Preview](preview.png)
+---
+
+## Screenshots
+
+| Single battery | Two batteries | With total kWh |
+|:-:|:-:|:-:|
+| ![Single battery](screenshots/1%20battery.png) | ![Two batteries](screenshots/2%20batteries.png) | ![Total kWh](screenshots/2%20Batteries%20with%20total.png) |
 
 ---
 
@@ -58,6 +64,7 @@ batteries:
 |-----|------|----------|-------------|
 | `title` | string | No | Card header text |
 | `batteries` | list | Yes | One or more battery definitions (see below) |
+| `show_total` | boolean | No | Show combined total kWh below the grid |
 
 **Battery definition**
 
