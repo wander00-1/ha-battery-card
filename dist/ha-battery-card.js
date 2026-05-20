@@ -1,5 +1,5 @@
 (() => {
-  const CARD_VERSION = '0.6.2';
+  const CARD_VERSION = '0.6.3';
 
   function getColor(pct) {
     if (pct <= 20) return { fill: '#ff2020', glow: 'rgba(255,32,32,0.7)', dark: '#4d0000' };
@@ -237,7 +237,7 @@
       // Title form
       const titleForm = document.createElement('ha-form');
       titleForm.hass = this._hass;
-      titleForm.data = { title: this._config.title || '' };
+      titleForm.data = { title: this._config.title || '', show_total: this._config.show_total || false };
       titleForm.schema = TITLE_SCHEMA;
       titleForm.computeLabel = s => s.label || s.name;
       titleForm.addEventListener('value-changed', e => {
