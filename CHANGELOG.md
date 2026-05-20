@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.5] - 2026-05-20
+
+### Added
+- Total kWh display now also shows average percentage in brackets e.g. `9.01 kWh (46.4%)`
+
+### Fixed
+- kWh label text colour now switches at exactly 50% (was ~45%) — amber fill no longer shows hard-to-read dark text
+- Darkened green dark colour for better contrast at high charge levels
+
 ## [0.6.4] - 2026-05-20
 
 ### Fixed
