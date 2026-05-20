@@ -1,5 +1,5 @@
 (() => {
-  const CARD_VERSION = '0.1.0';
+  const CARD_VERSION = '0.2.0';
 
   function getColor(pct) {
     if (pct <= 20) return { fill: '#ff2020', glow: 'rgba(255,32,32,0.7)' };
@@ -7,12 +7,21 @@
     return { fill: '#39ff14', glow: 'rgba(57,255,20,0.7)' };
   }
 
-  function buildSVG(pct, color) {
+  function buildSVG(pct, color, kwh) {
     const W = 80, H = 140;
     const termW = 24, termH = 8;
     const bodyR = 6;
     const fillH = Math.round((H - 4) * (pct / 100));
     const fillY = 4 + (H - 4) - fillH;
+    const bodyCenterY = termH + 2 + (H - 4) / 2;
+
+    const kwhLabel = (kwh !== null && !isNaN(kwh))
+      ? `
+  <rect x="6" y="${bodyCenterY - 10}" width="${W - 12}" height="18" rx="3" fill="rgba(0,0,0,0.45)"/>
+  <text x="${W / 2}" y="${bodyCenterY + 4}" text-anchor="middle"
+        font-size="11" font-family="sans-serif" font-weight="600"
+        fill="white" style="pointer-events:none">${kwh.toFixed(2)} kWh</text>`
+      : '';
 
     return `
 <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H + termH}" viewBox="0 0 ${W} ${H + termH}" style="display:block;overflow:visible">
@@ -64,6 +73,9 @@
         rx="${bodyR}" ry="${bodyR}"
         fill="none" stroke="${color.fill}" stroke-width="1.5" stroke-opacity="0.5"
         filter="url(#glow-${pct})"/>` : ''}
+
+  <!-- kWh label centred in body -->
+  ${kwhLabel}
 </svg>`;
   }
 
@@ -77,25 +89,17 @@
     const kwh = kwhState ? parseFloat(kwhState.state) : null;
     const color = getColor(pct);
 
-    const kwhStr = kwh !== null && !isNaN(kwh)
-      ? `<div class="battery-kwh">${kwh.toFixed(1)} kWh</div>` : '';
-
     return `
 <div class="battery-cell">
-  <div class="battery-svg-wrap">${buildSVG(pct, color)}</div>
+  <div class="battery-svg-wrap">${buildSVG(pct, color, kwh)}</div>
   <div class="battery-pct" style="color:${color.fill};text-shadow:0 0 8px ${color.glow}">${pct.toFixed(2)}%</div>
-  ${kwhStr}
   <div class="battery-name">${battery.name || ''}</div>
 </div>`;
   }
 
   const STYLES = `
-    :host {
-      display: block;
-    }
-    ha-card {
-      overflow: hidden;
-    }
+    :host { display: block; }
+    ha-card { overflow: hidden; }
     .card-header {
       padding: 14px 16px 4px;
       font-size: 1.1em;
@@ -125,11 +129,6 @@
       letter-spacing: 0.02em;
       line-height: 1;
     }
-    .battery-kwh {
-      font-size: 0.85em;
-      color: #99a;
-      letter-spacing: 0.03em;
-    }
     .battery-name {
       font-size: 0.78em;
       color: #778;
@@ -141,10 +140,152 @@
       0%, 100% { opacity: 1; }
       50%       { opacity: 0.75; }
     }
-    .battery-fill {
-      animation: glow-pulse 2.4s ease-in-out infinite;
+    .battery-fill { animation: glow-pulse 2.4s ease-in-out infinite; }
+  `;
+
+  // ── Editor ──────────────────────────────────────────────────────────────────
+
+  const EDITOR_STYLES = `
+    :host { display: block; padding: 4px 0; }
+    .battery-row {
+      border: 1px solid var(--divider-color, rgba(0,0,0,0.12));
+      border-radius: 8px;
+      padding: 12px;
+      margin: 8px 0;
+    }
+    .row-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 500;
+      color: var(--primary-text-color);
+      margin-bottom: 4px;
+    }
+    .remove-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--error-color, #f44336);
+      font-size: 0.85em;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+    .remove-btn:hover { background: var(--error-color, #f44336); color: white; }
+    .add-row {
+      margin-top: 8px;
+      display: flex;
+      justify-content: flex-end;
     }
   `;
+
+  const TITLE_SCHEMA = [
+    { name: 'title', label: 'Card title', selector: { text: {} } },
+  ];
+
+  const BATTERY_SCHEMA = [
+    { name: 'name', label: 'Battery name', selector: { text: {} } },
+    { name: 'percentage_entity', label: 'Percentage entity (%)', selector: { entity: { domain: 'sensor' } } },
+    { name: 'energy_entity', label: 'Energy entity (kWh)', selector: { entity: { domain: 'sensor' } } },
+  ];
+
+  class HaBatteryCardEditor extends HTMLElement {
+    constructor() {
+      super();
+      this.attachShadow({ mode: 'open' });
+      this._config = { batteries: [] };
+      this._hass = null;
+    }
+
+    set hass(hass) {
+      this._hass = hass;
+      this.shadowRoot.querySelectorAll('ha-form').forEach(f => { f.hass = hass; });
+    }
+
+    setConfig(config) {
+      this._config = { batteries: [], ...JSON.parse(JSON.stringify(config)) };
+      this._render();
+    }
+
+    _fire() {
+      this.dispatchEvent(new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true, composed: true,
+      }));
+    }
+
+    _render() {
+      const shadow = this.shadowRoot;
+      shadow.innerHTML = `<style>${EDITOR_STYLES}</style>`;
+
+      // Title form
+      const titleForm = document.createElement('ha-form');
+      titleForm.hass = this._hass;
+      titleForm.data = { title: this._config.title || '' };
+      titleForm.schema = TITLE_SCHEMA;
+      titleForm.addEventListener('value-changed', e => {
+        this._config = { ...this._config, title: e.detail.value.title };
+        this._fire();
+      });
+      shadow.appendChild(titleForm);
+
+      // Per-battery rows
+      this._config.batteries.forEach((battery, i) => {
+        const row = document.createElement('div');
+        row.className = 'battery-row';
+
+        const header = document.createElement('div');
+        header.className = 'row-header';
+        const label = document.createElement('span');
+        label.textContent = `Battery ${i + 1}`;
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-btn';
+        removeBtn.textContent = 'Remove';
+        removeBtn.addEventListener('click', () => {
+          this._config.batteries.splice(i, 1);
+          this._fire();
+          this._render();
+        });
+        header.appendChild(label);
+        header.appendChild(removeBtn);
+        row.appendChild(header);
+
+        const form = document.createElement('ha-form');
+        form.hass = this._hass;
+        form.data = {
+          name: battery.name || '',
+          percentage_entity: battery.percentage_entity || '',
+          energy_entity: battery.energy_entity || '',
+        };
+        form.schema = BATTERY_SCHEMA;
+        form.addEventListener('value-changed', e => {
+          this._config.batteries[i] = { ...this._config.batteries[i], ...e.detail.value };
+          this._fire();
+        });
+        row.appendChild(form);
+        shadow.appendChild(row);
+      });
+
+      // Add battery button
+      const addRow = document.createElement('div');
+      addRow.className = 'add-row';
+      const addBtn = document.createElement('mwc-button');
+      addBtn.setAttribute('icon', 'mdi:plus');
+      addBtn.textContent = 'Add Battery';
+      addBtn.addEventListener('click', () => {
+        this._config.batteries.push({ name: '', percentage_entity: '', energy_entity: '' });
+        this._fire();
+        this._render();
+      });
+      addRow.appendChild(addBtn);
+      shadow.appendChild(addRow);
+    }
+  }
+
+  if (!customElements.get('ha-battery-card-editor')) {
+    customElements.define('ha-battery-card-editor', HaBatteryCardEditor);
+  }
+
+  // ── Card ────────────────────────────────────────────────────────────────────
 
   class HaBatteryCard extends HTMLElement {
     constructor() {
@@ -178,19 +319,12 @@
   ${this._config.title ? `<div class="card-header">${this._config.title}</div>` : ''}
   <div class="battery-grid"></div>
 </ha-card>`;
-
-      shadow.querySelectorAll('.battery-cell').forEach((cell, i) => {
-        cell.addEventListener('click', () => this._handleClick(i));
-      });
     }
 
     _update() {
       const grid = this.shadowRoot.querySelector('.battery-grid');
       if (!grid) return;
-      grid.innerHTML = this._config.batteries
-        .map(b => buildCell(b, this._hass))
-        .join('');
-
+      grid.innerHTML = this._config.batteries.map(b => buildCell(b, this._hass)).join('');
       grid.querySelectorAll('.battery-cell').forEach((cell, i) => {
         cell.addEventListener('click', () => this._handleClick(i));
       });
@@ -200,25 +334,21 @@
       const battery = this._config.batteries[index];
       const entity = battery.percentage_entity || battery.energy_entity;
       if (!entity) return;
-      const event = new CustomEvent('hass-more-info', {
-        bubbles: true, composed: true,
-        detail: { entityId: entity }
-      });
-      this.dispatchEvent(event);
+      this.dispatchEvent(new CustomEvent('hass-more-info', {
+        bubbles: true, composed: true, detail: { entityId: entity },
+      }));
     }
 
     static getConfigElement() {
-      const editor = document.createElement('hui-card-element-editor');
-      editor.cardConfig = {};
-      return editor;
+      return document.createElement('ha-battery-card-editor');
     }
 
     static getStubConfig() {
       return {
         title: 'Battery Status',
         batteries: [
-          { name: 'Home Battery', percentage_entity: 'sensor.battery_level', energy_entity: 'sensor.battery_energy_kwh' }
-        ]
+          { name: 'Home Battery', percentage_entity: 'sensor.battery_level', energy_entity: 'sensor.battery_energy_kwh' },
+        ],
       };
     }
   }
