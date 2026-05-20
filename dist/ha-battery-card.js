@@ -1,10 +1,10 @@
 (() => {
-  const CARD_VERSION = '0.6.1';
+  const CARD_VERSION = '0.6.2';
 
   function getColor(pct) {
-    if (pct <= 20) return { fill: '#ff2020', glow: 'rgba(255,32,32,0.7)' };
-    if (pct <= 50) return { fill: '#ffaa00', glow: 'rgba(255,170,0,0.7)' };
-    return { fill: '#39ff14', glow: 'rgba(57,255,20,0.7)' };
+    if (pct <= 20) return { fill: '#ff2020', glow: 'rgba(255,32,32,0.7)', dark: '#4d0000' };
+    if (pct <= 50) return { fill: '#ffaa00', glow: 'rgba(255,170,0,0.7)', dark: '#4d3300' };
+    return { fill: '#39ff14', glow: 'rgba(57,255,20,0.7)', dark: '#004d00' };
   }
 
   function buildSVG(pct, color, kwh) {
@@ -15,11 +15,13 @@
     const fillY = 4 + (H - 4) - fillH;
     const bodyCenterY = termH + 2 + (H - 4) / 2;
 
+    const fillCoversCenter = fillY <= bodyCenterY;
+    const kwhTextColor = fillCoversCenter ? color.dark : 'white';
     const kwhLabel = (kwh !== null && !isNaN(kwh))
       ? `
   <text x="${W / 2}" y="${bodyCenterY + 4}" text-anchor="middle"
         font-size="13" font-family="sans-serif" font-weight="600"
-        fill="white" style="pointer-events:none">${kwh.toFixed(2)} kWh</text>`
+        fill="${kwhTextColor}" style="pointer-events:none">${kwh.toFixed(2)} kWh</text>`
       : '';
 
     return `
