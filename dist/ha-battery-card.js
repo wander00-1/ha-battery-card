@@ -1,5 +1,5 @@
 (() => {
-  const CARD_VERSION = '0.6.0';
+  const CARD_VERSION = '0.6.1';
 
   function getColor(pct) {
     if (pct <= 20) return { fill: '#ff2020', glow: 'rgba(255,32,32,0.7)' };
@@ -10,7 +10,7 @@
   function buildSVG(pct, color, kwh) {
     const W = 80, H = 140;
     const termW = 24, termH = 8;
-    const bodyR = 16;
+    const bodyR = 6;
     const fillH = Math.round((H - 4) * (pct / 100));
     const fillY = 4 + (H - 4) - fillH;
     const bodyCenterY = termH + 2 + (H - 4) / 2;
@@ -239,7 +239,7 @@
       titleForm.schema = TITLE_SCHEMA;
       titleForm.computeLabel = s => s.label || s.name;
       titleForm.addEventListener('value-changed', e => {
-        this._config = { ...this._config, title: e.detail.value.title };
+        this._config = { ...this._config, ...e.detail.value };
         this._fire();
       });
       shadow.appendChild(titleForm);
