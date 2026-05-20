@@ -1,10 +1,10 @@
 (() => {
-  const CARD_VERSION = '0.6.4';
+  const CARD_VERSION = '0.6.5';
 
   function getColor(pct) {
     if (pct <= 20) return { fill: '#ff2020', glow: 'rgba(255,32,32,0.7)', dark: '#4d0000' };
     if (pct <= 50) return { fill: '#ffaa00', glow: 'rgba(255,170,0,0.7)', dark: '#4d3300' };
-    return { fill: '#39ff14', glow: 'rgba(57,255,20,0.7)', dark: '#004d00' };
+    return { fill: '#39ff14', glow: 'rgba(57,255,20,0.7)', dark: '#002200' };
   }
 
   function buildSVG(pct, color, kwh) {
@@ -15,8 +15,7 @@
     const fillY = 4 + (H - 4) - fillH;
     const bodyCenterY = termH + 2 + (H - 4) / 2;
 
-    const fillCoversCenter = fillY <= bodyCenterY;
-    const kwhTextColor = fillCoversCenter ? color.dark : 'white';
+    const kwhTextColor = pct >= 50 ? color.dark : 'white';
     const kwhLabel = (kwh !== null && !isNaN(kwh))
       ? `
   <text x="${W / 2}" y="${bodyCenterY + 4}" text-anchor="middle"
@@ -352,14 +351,23 @@
       const totalEl = this.shadowRoot.querySelector('.total-kwh');
       if (totalEl) {
         if (this._config.show_total) {
-          const values = this._config.batteries
+          const kwhValues = this._config.batteries
             .map(b => b.energy_entity && this._hass?.states[b.energy_entity])
             .filter(s => s && s.state !== 'unavailable' && s.state !== 'unknown')
             .map(s => parseFloat(s.state))
             .filter(v => !isNaN(v));
-          if (values.length) {
-            const total = values.reduce((a, b) => a + b, 0);
-            totalEl.innerHTML = `Total remaining: <span>${total.toFixed(2)} kWh</span>`;
+          if (kwhValues.length) {
+            const total = kwhValues.reduce((a, b) => a + b, 0);
+            const pctValues = this._config.batteries
+              .map(b => b.percentage_entity && this._hass?.states[b.percentage_entity])
+              .filter(s => s && s.state !== 'unavailable' && s.state !== 'unknown')
+              .map(s => parseFloat(s.state))
+              .filter(v => !isNaN(v));
+            const avgPct = pctValues.length
+              ? pctValues.reduce((a, b) => a + b, 0) / pctValues.length
+              : null;
+            const pctStr = avgPct !== null ? ` (${avgPct.toFixed(1)}%)` : '';
+            totalEl.innerHTML = `Total remaining: <span>${total.toFixed(2)} kWh${pctStr}</span>`;
             totalEl.style.display = '';
           } else {
             totalEl.style.display = 'none';
