@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-05-20
+
+### Fixed
+- Editor field labels now display correctly — set `computeLabel` on ha-form so it uses the `label` property instead of falling back to the field name
+- Add Battery button is now correctly styled blue using inline CSS custom properties and the `raised` attribute
+
 ## [0.3.0] - 2026-05-20
 
 ### Changed
