@@ -1,5 +1,5 @@
 (() => {
-  const CARD_VERSION = '0.5.0';
+  const CARD_VERSION = '0.5.1';
 
   function getColor(pct) {
     if (pct <= 20) return { fill: '#ff2020', glow: 'rgba(255,32,32,0.7)' };
@@ -191,7 +191,7 @@
     constructor() {
       super();
       this.attachShadow({ mode: 'open' });
-      this._config = { batteries: [] };
+      this._config = null;
       this._hass = null;
     }
 
@@ -201,8 +201,11 @@
     }
 
     setConfig(config) {
-      this._config = { batteries: [], ...JSON.parse(JSON.stringify(config)) };
-      this._render();
+      const newConfig = { batteries: [], ...JSON.parse(JSON.stringify(config)) };
+      const needsRender = !this._config ||
+        newConfig.batteries.length !== this._config.batteries.length;
+      this._config = newConfig;
+      if (needsRender) this._render();
     }
 
     _fire() {
