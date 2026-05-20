@@ -1,5 +1,5 @@
 (() => {
-  const CARD_VERSION = '0.4.0';
+  const CARD_VERSION = '0.5.0';
 
   function getColor(pct) {
     if (pct <= 20) return { fill: '#ff2020', glow: 'rgba(255,32,32,0.7)' };
@@ -18,7 +18,7 @@
     const kwhLabel = (kwh !== null && !isNaN(kwh))
       ? `
   <text x="${W / 2}" y="${bodyCenterY + 4}" text-anchor="middle"
-        font-size="11" font-family="sans-serif" font-weight="600"
+        font-size="13" font-family="sans-serif" font-weight="600"
         fill="white" style="pointer-events:none">${kwh.toFixed(2)} kWh</text>`
       : '';
 
@@ -269,11 +269,9 @@
       // Add battery button
       const addRow = document.createElement('div');
       addRow.className = 'add-row';
-      const addBtn = document.createElement('mwc-button');
-      addBtn.setAttribute('raised', '');
-      addBtn.textContent = 'Add Battery';
-      addBtn.style.setProperty('--mdc-theme-primary', '#1976d2');
-      addBtn.style.setProperty('--mdc-theme-on-primary', 'white');
+      const addBtn = document.createElement('button');
+      addBtn.textContent = '+ Add Battery';
+      addBtn.style.cssText = 'background:#1976d2;color:white;border:none;border-radius:4px;padding:8px 16px;font-size:0.875em;font-weight:500;cursor:pointer;letter-spacing:0.04em;';
       addBtn.addEventListener('click', () => {
         this._config.batteries.push({ name: '', percentage_entity: '', energy_entity: '' });
         this._fire();
