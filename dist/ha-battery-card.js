@@ -1,5 +1,5 @@
 (() => {
-  const CARD_VERSION = '0.6.3';
+  const CARD_VERSION = '0.6.4';
 
   function getColor(pct) {
     if (pct <= 20) return { fill: '#ff2020', glow: 'rgba(255,32,32,0.7)', dark: '#4d0000' };
@@ -119,10 +119,10 @@
       flex-direction: column;
       align-items: center;
       gap: 6px;
-      cursor: pointer;
     }
     .battery-svg-wrap {
       filter: drop-shadow(0 0 6px rgba(0,0,0,0.8));
+      cursor: pointer;
     }
     .battery-pct {
       font-size: 1.6em;
@@ -345,8 +345,8 @@
       const grid = this.shadowRoot.querySelector('.battery-grid');
       if (!grid) return;
       grid.innerHTML = this._config.batteries.map(b => buildCell(b, this._hass)).join('');
-      grid.querySelectorAll('.battery-cell').forEach((cell, i) => {
-        cell.addEventListener('click', () => this._handleClick(i));
+      grid.querySelectorAll('.battery-svg-wrap').forEach((wrap, i) => {
+        wrap.addEventListener('click', () => this._handleClick(i));
       });
 
       const totalEl = this.shadowRoot.querySelector('.total-kwh');
