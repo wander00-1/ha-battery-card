@@ -1,5 +1,5 @@
 (() => {
-  const CARD_VERSION = '0.6.5';
+  const CARD_VERSION = '1.0.1';
 
   function getColor(pct) {
     if (pct <= 20) return { fill: '#ff2020', glow: 'rgba(255,32,32,0.7)', dark: '#4d0000' };
