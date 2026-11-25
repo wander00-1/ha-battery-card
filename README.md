@@ -56,6 +56,10 @@ batteries:
   - name: EV
     percentage_entity: sensor.ev_battery_level
     # energy_entity is optional — omit if you only have %
+  - name: Powerwall
+    percentage_entity: sensor.powerwall_charge
+    derive_energy: true                          # calculate kWh from %
+    capacity_kwh: 13.5                           # usable capacity in kWh
 ```
 
 ### Options
@@ -72,7 +76,9 @@ batteries:
 |-----|------|----------|-------------|
 | `name` | string | No | Display label shown below the graphic |
 | `percentage_entity` | string | Yes* | Entity ID whose state is the charge percentage (0–100) |
-| `energy_entity` | string | No | Entity ID whose state is energy in kWh |
+| `energy_entity` | string | No | Entity ID whose state is energy in kWh (ignored when `derive_energy` is on) |
+| `derive_energy` | boolean | No | Calculate kWh from percentage instead of reading `energy_entity` |
+| `capacity_kwh` | number | No | Usable capacity in kWh, used when `derive_energy` is on |
 
 \* At least one of `percentage_entity` or `energy_entity` is required per entry.
 
