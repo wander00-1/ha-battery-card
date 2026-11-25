@@ -1,5 +1,5 @@
 (() => {
-  const CARD_VERSION = '1.0.1';
+  const CARD_VERSION = '1.1.0';
 
   function getColor(pct) {
     if (pct <= 20) return { fill: '#ff2020', glow: 'rgba(255,32,32,0.7)', dark: '#4d0000' };
@@ -79,14 +79,32 @@
 </svg>`;
   }
 
-  function buildCell(battery, hass) {
-    const pctState = hass && battery.percentage_entity
-      ? hass.states[battery.percentage_entity] : null;
-    const kwhState = hass && battery.energy_entity
-      ? hass.states[battery.energy_entity] : null;
+  function readState(hass, entityId) {
+    const s = hass && entityId ? hass.states[entityId] : null;
+    if (!s || s.state === 'unavailable' || s.state === 'unknown') return null;
+    const v = parseFloat(s.state);
+    return isNaN(v) ? null : v;
+  }
 
-    const pct = pctState ? Math.min(100, Math.max(0, parseFloat(pctState.state) || 0)) : 0;
-    const kwh = kwhState ? parseFloat(kwhState.state) : null;
+  // Returns { pct, kwh } where either may be null if unavailable.
+  // kWh comes from energy_entity, or is derived from % x capacity_kwh when derive_energy is set.
+  function getBatteryValues(battery, hass) {
+    const rawPct = readState(hass, battery.percentage_entity);
+    const pct = rawPct !== null ? Math.min(100, Math.max(0, rawPct)) : null;
+    let kwh;
+    if (battery.derive_energy) {
+      const cap = parseFloat(battery.capacity_kwh);
+      kwh = pct !== null && !isNaN(cap) && cap > 0 ? (pct / 100) * cap : null;
+    } else {
+      kwh = readState(hass, battery.energy_entity);
+    }
+    return { pct, kwh };
+  }
+
+  function buildCell(battery, hass) {
+    const values = getBatteryValues(battery, hass);
+    const pct = values.pct ?? 0;
+    const kwh = values.kwh;
     const color = getColor(pct);
 
     return `
@@ -195,11 +213,26 @@
     { name: 'show_total', label: 'Show total kWh', selector: { boolean: {} } },
   ];
 
-  const BATTERY_SCHEMA = [
-    { name: 'name', label: 'Battery name', selector: { text: {} } },
-    { name: 'percentage_entity', label: 'Battery Percentage', selector: { entity: { domain: 'sensor' } } },
-    { name: 'energy_entity', label: 'Battery Power (kWh)', selector: { entity: { domain: 'sensor' } } },
-  ];
+  function batterySchema(battery) {
+    return [
+      { name: 'name', label: 'Battery name', selector: { text: {} } },
+      { name: 'percentage_entity', label: 'Battery Percentage', selector: { entity: { domain: 'sensor' } } },
+      { name: 'derive_energy', label: 'Calculate kWh from percentage', selector: { boolean: {} } },
+      battery.derive_energy
+        ? { name: 'capacity_kwh', label: 'Usable capacity (kWh)', selector: { number: { min: 0, step: 0.01, mode: 'box', unit_of_measurement: 'kWh' } } }
+        : { name: 'energy_entity', label: 'Battery Power (kWh)', selector: { entity: { domain: 'sensor' } } },
+    ];
+  }
+
+  function batteryFormData(battery) {
+    return {
+      name: battery.name || '',
+      percentage_entity: battery.percentage_entity || '',
+      derive_energy: battery.derive_energy || false,
+      capacity_kwh: battery.capacity_kwh ?? undefined,
+      energy_entity: battery.energy_entity || '',
+    };
+  }
 
   class HaBatteryCardEditor extends HTMLElement {
     constructor() {
@@ -268,15 +301,18 @@
 
         const form = document.createElement('ha-form');
         form.hass = this._hass;
-        form.data = {
-          name: battery.name || '',
-          percentage_entity: battery.percentage_entity || '',
-          energy_entity: battery.energy_entity || '',
-        };
-        form.schema = BATTERY_SCHEMA;
+        form.data = batteryFormData(battery);
+        form.schema = batterySchema(battery);
         form.computeLabel = s => s.label || s.name;
         form.addEventListener('value-changed', e => {
-          this._config.batteries[i] = { ...this._config.batteries[i], ...e.detail.value };
+          const prev = this._config.batteries[i];
+          const next = { ...prev, ...e.detail.value };
+          this._config.batteries[i] = next;
+          // Swap energy entity <-> capacity field when the toggle changes
+          if (!!prev.derive_energy !== !!next.derive_energy) {
+            form.schema = batterySchema(next);
+            form.data = batteryFormData(next);
+          }
           this._fire();
         });
         row.appendChild(form);
@@ -351,18 +387,11 @@
       const totalEl = this.shadowRoot.querySelector('.total-kwh');
       if (totalEl) {
         if (this._config.show_total) {
-          const kwhValues = this._config.batteries
-            .map(b => b.energy_entity && this._hass?.states[b.energy_entity])
-            .filter(s => s && s.state !== 'unavailable' && s.state !== 'unknown')
-            .map(s => parseFloat(s.state))
-            .filter(v => !isNaN(v));
+          const values = this._config.batteries.map(b => getBatteryValues(b, this._hass));
+          const kwhValues = values.map(v => v.kwh).filter(v => v !== null);
           if (kwhValues.length) {
             const total = kwhValues.reduce((a, b) => a + b, 0);
-            const pctValues = this._config.batteries
-              .map(b => b.percentage_entity && this._hass?.states[b.percentage_entity])
-              .filter(s => s && s.state !== 'unavailable' && s.state !== 'unknown')
-              .map(s => parseFloat(s.state))
-              .filter(v => !isNaN(v));
+            const pctValues = values.map(v => v.pct).filter(v => v !== null);
             const avgPct = pctValues.length
               ? pctValues.reduce((a, b) => a + b, 0) / pctValues.length
               : null;
